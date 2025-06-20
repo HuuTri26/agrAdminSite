@@ -1,0 +1,116 @@
+{% extends "navigation_bar.html" %}
+
+{% block title %}{{ 'Edit' if item else 'Add New' }} Item{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex align-items-center mb-4">
+        <a href="{{ url_for('get_categories_items', category_id=category_id) }}" class="btn btn-outline-secondary me-3">
+            <i class="bi bi-arrow-left"></i> Back to Items
+        </a>
+        <h1>{{ 'Edit' if item else 'Add New' }} Item in {{ category_name }}</h1>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger" role="alert">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    {% if success %}
+    <div class="alert alert-success" role="alert">
+        {{ success }}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" 
+                  action="{{ url_for('update_item', category_id=category_id, item_id=item.Id) if item else url_for('add_item', category_id=category_id) }}" 
+                  enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="itemId" class="form-label">Item ID</label>
+                    <input type="text" class="form-control" id="itemId" name="itemId" required
+                           value="{{ item.Id if item else '' }}"
+                           {{ 'readonly' if item else '' }}>
+                </div>
+
+                <div class="mb-3">
+                    <label for="itemName" class="form-label">Item Name</label>
+                    <input type="text" class="form-control" id="itemName" name="itemName" required
+                           value="{{ item.Name if item else '' }}">
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description</label>
+                    <textarea class="form-control" id="description" name="description" rows="3" required>{{ item.Description if item else '' }}</textarea>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="price" class="form-label">Price</label>
+                            <input type="number" class="form-control" id="price" name="price" step="0.01" required
+                                   value="{{ item.Price if item else '' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="unit" class="form-label">Unit</label>
+                            <input type="text" class="form-control" id="unit" name="unit" required
+                                   value="{{ item.Unit if item else '' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="inventory" class="form-label">Inventory</label>
+                            <input type="number" class="form-control" id="inventory" name="inventory" required
+                                   value="{{ item.Inventory if item else '' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="itemImage" class="form-label">Item Image</label>
+                    {% if item %}
+                    <div class="mb-2">
+                        <img src="{{ item.Image }}" alt="{{ item.Name }}" class="img-thumbnail" style="height: 100px;">
+                    </div>
+                    {% endif %}
+                    <input type="file" class="form-control" id="itemImage" name="itemImage" 
+                           accept="image/png,image/jpeg" {{ '' if item else 'required' }}>
+                    <small class="text-muted">Only PNG and JPEG files are allowed. Maximum size: 2MB{% if item %} - Leave empty to keep current image{% endif %}</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary">{{ 'Update' if item else 'Add' }} Item</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .card {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+
+<script>
+document.querySelector('form').addEventListener('submit', function(e) {
+    const fileInput = document.getElementById('itemImage');
+    if (fileInput.files.length > 0) {
+        const maxSize = 2 * 1024 * 1024; // 2MB
+        if (fileInput.files[0].size > maxSize) {
+            e.preventDefault();
+            alert('Image file size must be less than 2MB');
+        }
+    }
+});
+</script>
+{% endblock %} 

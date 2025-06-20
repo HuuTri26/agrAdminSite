@@ -1,0 +1,220 @@
+{% extends "navigation_bar.html" %}
+
+{% block title %}Reviews{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Reviews Management</h1>
+
+    {% if error %}
+    <div class="alert alert-danger" role="alert">
+        {{ error }}
+    </div>
+    {% else %}
+        <!-- Search and Filter Section -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search by item name...">
+                    <button class="btn btn-outline-secondary" type="button" onclick="searchReviews()">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" id="categoryFilter" onchange="filterReviews()">
+                    <option value="all">All Categories</option>
+                    {% for category, items in reviews.items() %}
+                    <option value="{{ category }}">{{ category|title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" id="ratingFilter" onchange="filterReviews()">
+                    <option value="all">All Ratings</option>
+                    <option value="5">5 Stars</option>
+                    <option value="4">4 Stars & Up</option>
+                    <option value="3">3 Stars & Up</option>
+                    <option value="2">2 Stars & Up</option>
+                    <option value="1">1 Star & Up</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Reviews Display -->
+        {% if reviews %}
+        <div class="accordion" id="reviewsAccordion">
+            {% for category, items in reviews.items() %}
+            <div class="accordion-item category-section" data-category="{{ category }}">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" 
+                            data-bs-target="#collapse{{ category }}" aria-expanded="true">
+                        {{ category|title }}
+                        <span class="badge bg-primary ms-2">{{ items|length }} items</span>
+                    </button>
+                </h2>
+                <div id="collapse{{ category }}" class="accordion-collapse collapse show" 
+                     data-bs-parent="#reviewsAccordion">
+                    <div class="accordion-body">
+                        <div class="row row-cols-1 row-cols-md-3 g-4">
+                            {% for item_id, reviews in items.items() %}
+                            <div class="col review-card" 
+                                 data-category="{{ category }}"
+                                 data-item-id="{{ item_id }}"
+                                 data-avg-rating="{{ (reviews.values()|map(attribute='rating')|sum / reviews|length)|round(1) if reviews else 0 }}">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h5 class="card-title">{{ item_id }}</h5>
+                                            <div class="rating-badge">
+                                                <span class="badge bg-success">
+                                                    {{ (reviews.values()|map(attribute='rating')|sum / reviews|length)|round(1) if reviews else 0 }} ★
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <p class="card-text">
+                                            <strong>Total Reviews:</strong> {{ reviews|length }}<br>
+                                            <strong>Latest Review:</strong><br>
+                                            {% set latest_review = reviews.values()|sort(attribute='timestamp')|last %}
+                                            {% if latest_review %}
+                                            "{{ latest_review.comment[:100] }}{% if latest_review.comment|length > 100 %}...{% endif %}"
+                                            {% else %}
+                                            No reviews yet
+                                            {% endif %}
+                                        </p>
+                                        <a href="{{ url_for('get_reviews_item_details', category=category, item_id=item_id) }}" 
+                                           class="btn btn-outline-primary">
+                                            View All Reviews
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info" role="alert">
+            No reviews available.
+        </div>
+        {% endif %}
+
+        <!-- No Results Message -->
+        <div id="noResults" class="alert alert-info d-none" role="alert">
+            No reviews found matching your criteria.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .accordion-button:not(.collapsed) {
+        background-color: #f8f9fa;
+        color: #2c3e50;
+    }
+
+    .card {
+        transition: transform 0.2s;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .card:hover {
+        transform: translateY(-5px);
+    }
+
+    .rating-badge .badge {
+        font-size: 1rem;
+    }
+
+    .card-title {
+        color: #2c3e50;
+        font-weight: 600;
+    }
+
+    .badge {
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+
+<script>
+function searchReviews() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const cards = document.getElementsByClassName('review-card');
+    let hasVisibleItems = false;
+
+    for (let card of cards) {
+        const itemId = card.getAttribute('data-item-id').toLowerCase();
+        const shouldShow = itemId.includes(searchTerm) && isReviewMatchingFilters(card);
+        
+        card.style.display = shouldShow ? '' : 'none';
+        if (shouldShow) hasVisibleItems = true;
+    }
+
+    // Show/hide no results message
+    document.getElementById('noResults').classList.toggle('d-none', hasVisibleItems);
+
+    // Show/hide category sections based on whether they have visible items
+    const categories = document.getElementsByClassName('category-section');
+    for (let category of categories) {
+        const visibleCards = category.querySelectorAll('.review-card[style=""]').length;
+        category.style.display = visibleCards > 0 ? '' : 'none';
+    }
+}
+
+function filterReviews() {
+    const categoryFilter = document.getElementById('categoryFilter').value;
+    const ratingFilter = parseFloat(document.getElementById('ratingFilter').value);
+    const cards = document.getElementsByClassName('review-card');
+    let hasVisibleItems = false;
+
+    for (let card of cards) {
+        const shouldShow = isReviewMatchingFilters(card);
+        card.style.display = shouldShow ? '' : 'none';
+        if (shouldShow) hasVisibleItems = true;
+    }
+
+    // Show/hide no results message
+    document.getElementById('noResults').classList.toggle('d-none', hasVisibleItems);
+
+    // Show/hide category sections
+    const categories = document.getElementsByClassName('category-section');
+    for (let category of categories) {
+        const visibleCards = category.querySelectorAll('.review-card[style=""]').length;
+        category.style.display = visibleCards > 0 ? '' : 'none';
+    }
+}
+
+function isReviewMatchingFilters(card) {
+    const categoryFilter = document.getElementById('categoryFilter').value;
+    const ratingFilter = parseFloat(document.getElementById('ratingFilter').value);
+    const cardCategory = card.getAttribute('data-category');
+    const avgRating = parseFloat(card.getAttribute('data-avg-rating'));
+
+    if (categoryFilter !== 'all' && cardCategory !== categoryFilter) {
+        return false;
+    }
+
+    if (!isNaN(ratingFilter) && avgRating < ratingFilter) {
+        return false;
+    }
+
+    return true;
+}
+
+// Add event listener for search input
+document.getElementById('searchInput').addEventListener('keyup', function(event) {
+    if (event.key === 'Enter') {
+        searchReviews();
+    }
+});
+</script>
+{% endblock %}

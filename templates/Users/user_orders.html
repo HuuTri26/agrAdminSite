@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Orders</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .order-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background-color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .error {
+            color: red;
+            padding: 10px;
+            border: 1px solid red;
+            border-radius: 4px;
+            background-color: #fff;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .order-status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .status-pending {
+            background-color: #ffeeba;
+            color: #856404;
+        }
+        .status-paid {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-cancelled {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .order-date {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .total-price {
+            font-weight: bold;
+            color: #28a745;
+            font-size: 1.1em;
+        }
+        .view-details {
+            background-color: #007bff;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 4px;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+        .view-details:hover {
+            background-color: #0056b3;
+            text-decoration: none;
+        }
+        .order-info {
+            flex-grow: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/users/{{ user_id }}" class="back-link">← Back to User Details</a>
+        <h1>User Orders</h1>
+        
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% else %}
+            {% for order_id, order in orders.items() %}
+                <div class="order-card">
+                    <div class="order-info">
+                        <h3>Order ID: {{ order.orderBillId }}</h3>
+                        <p class="order-date">Date: {{ order.orderDate|datetime }}</p>
+                        <p>Status: 
+                            <span class="order-status status-{{ order.status|lower }}">
+                                {{ order.status }}
+                            </span>
+                        </p>
+                        <p class="total-price">Total Amount: ${{ "%.2f"|format(order.totalPrice) }}</p>
+                    </div>
+                    <div>
+                        <a href="/orders/{{ order_id }}/details" class="view-details">View Details</a>
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Details</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .error {
+            color: red;
+            padding: 10px;
+            border: 1px solid red;
+            border-radius: 4px;
+            background-color: #fff;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .order-header {
+            border-bottom: 2px solid #eee;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .order-status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .status-pending {
+            background-color: #ffeeba;
+            color: #856404;
+        }
+        .status-paid {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-cancelled {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .order-date {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .total-price {
+            font-weight: bold;
+            color: #28a745;
+            font-size: 1.2em;
+            margin: 20px 0;
+        }
+        .items-container {
+            margin-top: 20px;
+        }
+        .item-card {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            background-color: #fff;
+        }
+        .item-image {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-right: 20px;
+        }
+        .item-details {
+            flex-grow: 1;
+        }
+        .item-name {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+        .item-price {
+            color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="javascript:history.back()" class="back-link">← Back to Orders</a>
+        
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% else %}
+            <div class="order-header">
+                <h1>Order Details</h1>
+                <p>Order ID: {{ order.orderBillId }}</p>
+                <p class="order-date">Date: {{ order.orderDate|datetime }}</p>
+                <p>Status: 
+                    <span class="order-status status-{{ order.status|lower }}">
+                        {{ order.status }}
+                    </span>
+                </p>
+            </div>
+
+            <div class="items-container">
+                <h2>Items</h2>
+                {% if order['items'] %}
+                    {% for item_name, item in order['items'].items() %}
+                        <div class="item-card">
+                            <img src="{{ item.image }}" alt="{{ item_name }}" class="item-image">
+                            <div class="item-details">
+                                <div class="item-name">{{ item_name }}</div>
+                                <p>Quantity: {{ item.quantity }} {{ item.unit }}</p>
+                                <p>Price: ${{ item.salePrice }} per {{ item.unit }}</p>
+                                <p class="item-price">Total: ${{ "%.2f"|format(item.quantity * item.salePrice) }}</p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No items found in this order.</p>
+                {% endif %}
+            </div>
+
+            <div class="total-price">
+                Order Total: ${{ "%.2f"|format(order.totalPrice) }}
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html> 

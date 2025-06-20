@@ -1,0 +1,242 @@
+{% extends "navigation_bar.html" %}
+
+{% block title %}Sales Details for {{ date }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('get_sold_items') }}">Sales History</a></li>
+            <li class="breadcrumb-item active">{{ date }}</li>
+        </ol>
+    </nav>
+
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="mb-0">Sales Details</h1>
+            <p class="text-muted">{{ date }}</p>
+        </div>
+        <div class="col-auto">
+            {% set total_revenue = namespace(value=0) %}
+            {% set total_items = namespace(value=0) %}
+            {% for item in items.values() %}
+                {% set total_revenue.value = total_revenue.value + (item.price * item.Sales) %}
+                {% set total_items.value = total_items.value + item.Sales %}
+            {% endfor %}
+            <div class="stats-summary text-end">
+                <h3 class="mb-0">${{ "%.2f"|format(total_revenue.value) }}</h3>
+                <small class="text-muted">Total Revenue</small>
+                <h5 class="mt-2 mb-0">{{ total_items.value }} items</h5>
+                <small class="text-muted">Total Quantity</small>
+            </div>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger" role="alert">
+        {{ error }}
+    </div>
+    {% else %}
+        <!-- Filter Section -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search items...">
+                    <button class="btn btn-outline-secondary" type="button" onclick="searchItems()">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" id="categoryFilter" onchange="filterItems()">
+                    <option value="all">All Categories</option>
+                    {% set categories = [] %}
+                    {% for item in items.values() %}
+                        {% if item.category not in categories %}
+                            {% set _ = categories.append(item.category) %}
+                        {% endif %}
+                    {% endfor %}
+                    {% for category in categories|sort %}
+                        <option value="{{ category }}">{{ category }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" id="sortOption" onchange="sortItems()">
+                    <option value="most-sold">Most Sold First</option>
+                    <option value="least-sold">Least Sold First</option>
+                    <option value="highest-revenue">Highest Revenue</option>
+                    <option value="lowest-revenue">Lowest Revenue</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Items Table -->
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Item</th>
+                        <th>Category</th>
+                        <th>Unit Price</th>
+                        <th>Quantity Sold</th>
+                        <th>Revenue</th>
+                        <th>% of Total Revenue</th>
+                    </tr>
+                </thead>
+                <tbody id="itemsTableBody">
+                    {% for item_key, item in items.items() %}
+                    {% set revenue = item.price * item.Sales %}
+                    {% set revenue_percentage = (revenue / total_revenue.value * 100)|round(1) %}
+                    <tr class="item-row" 
+                        data-category="{{ item.category }}"
+                        data-name="{{ item.itemName|lower }}"
+                        data-quantity="{{ item.Sales }}"
+                        data-revenue="{{ revenue }}">
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <img src="{{ item.image }}" alt="{{ item.itemName }}" class="item-image me-2">
+                                <div>
+                                    <strong>{{ item.itemName }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ item.unit }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ item.category }}</td>
+                        <td>${{ "%.2f"|format(item.price) }}</td>
+                        <td>{{ item.Sales }}</td>
+                        <td>${{ "%.2f"|format(revenue) }}</td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     data-width="{{ revenue_percentage }}"
+                                     aria-valuenow="{{ revenue_percentage }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                    {{ revenue_percentage }}%
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- No Results Message -->
+        <div id="noResults" class="alert alert-info d-none" role="alert">
+            No items found matching your criteria.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .stats-summary {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.5rem;
+    }
+
+    .item-image {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 0.25rem;
+    }
+
+    .progress {
+        height: 20px;
+        border-radius: 1rem;
+    }
+
+    .progress-bar {
+        transition: width 0.6s ease;
+    }
+
+    .table > :not(caption) > * > * {
+        vertical-align: middle;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+
+<script>
+function searchItems() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const categoryFilter = document.getElementById('categoryFilter').value;
+    const rows = document.getElementsByClassName('item-row');
+    let hasVisibleItems = false;
+
+    for (let row of rows) {
+        const name = row.getAttribute('data-name');
+        const category = row.getAttribute('data-category');
+        
+        const matchesSearch = name.includes(searchTerm);
+        const matchesCategory = categoryFilter === 'all' || category === categoryFilter;
+        
+        const shouldShow = matchesSearch && matchesCategory;
+        row.style.display = shouldShow ? '' : 'none';
+        if (shouldShow) hasVisibleItems = true;
+    }
+
+    document.getElementById('noResults').classList.toggle('d-none', hasVisibleItems);
+}
+
+function filterItems() {
+    searchItems();
+}
+
+function sortItems() {
+    const sortOption = document.getElementById('sortOption').value;
+    const tbody = document.getElementById('itemsTableBody');
+    const rows = Array.from(tbody.getElementsByClassName('item-row'));
+
+    rows.sort((a, b) => {
+        const quantityA = parseInt(a.getAttribute('data-quantity'));
+        const quantityB = parseInt(b.getAttribute('data-quantity'));
+        const revenueA = parseFloat(a.getAttribute('data-revenue'));
+        const revenueB = parseFloat(b.getAttribute('data-revenue'));
+
+        switch(sortOption) {
+            case 'most-sold':
+                return quantityB - quantityA;
+            case 'least-sold':
+                return quantityA - quantityB;
+            case 'highest-revenue':
+                return revenueB - revenueA;
+            case 'lowest-revenue':
+                return revenueA - revenueB;
+            default:
+                return 0;
+        }
+    });
+
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+// Add event listener for search input
+document.getElementById('searchInput').addEventListener('keyup', function(event) {
+    if (event.key === 'Enter') {
+        searchItems();
+    }
+});
+
+// Initial setup
+document.addEventListener('DOMContentLoaded', function() {
+    // Set progress bar widths
+    document.querySelectorAll('.progress-bar').forEach(bar => {
+        const width = bar.getAttribute('data-width');
+        bar.style.width = width + '%';
+    });
+    
+    sortItems();
+});
+</script>
+{% endblock %}

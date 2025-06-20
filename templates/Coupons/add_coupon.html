@@ -1,0 +1,145 @@
+{% extends "navigation_bar.html" %}
+
+{% block title %}{{ 'Edit' if coupon else 'Add New' }} Coupon{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex align-items-center mb-4">
+        <a href="{{ url_for('get_coupons') }}" class="btn btn-outline-secondary me-3">
+            <i class="bi bi-arrow-left"></i> Back to Coupons
+        </a>
+        <h1>{{ 'Edit' if coupon else 'Add New' }} Coupon</h1>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger" role="alert">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    {% if success %}
+    <div class="alert alert-success" role="alert">
+        {{ success }}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('update_coupon', coupon_id=coupon.Id) if coupon else url_for('add_coupon') }}">
+                <div class="mb-3">
+                    <label for="couponId" class="form-label">Coupon ID</label>
+                    <input type="text" class="form-control" id="couponId" name="couponId" 
+                           value="{{ coupon.Id if coupon else '' }}"
+                           {{ 'readonly' if coupon else '' }}
+                           required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description</label>
+                    <textarea class="form-control" id="description" name="description" rows="3" required>{{ coupon.description if coupon else '' }}</textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="couponType" class="form-label">Discount Type</label>
+                    <select class="form-select" id="couponType" name="couponType" required>
+                        <option value="percentage" {{ 'selected' if coupon and coupon.couponType == 'percentage' else '' }}>Percentage Discount</option>
+                        <option value="fixed" {{ 'selected' if coupon and coupon.couponType == 'fixed' else '' }}>Fixed Amount</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="discountValue" class="form-label">Discount Value</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="discountValue" name="discountValue" 
+                               step="0.01" min="0" max="100"
+                               value="{{ coupon.discountValue if coupon else '' }}"
+                               required>
+                        <span class="input-group-text" id="discountSymbol">%</span>
+                    </div>
+                    <div class="form-text" id="discountHelp">For percentage, enter a value between 0 and 100. For fixed amount, enter the dollar value.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="startDate" class="form-label">Start Date</label>
+                    <input type="date" class="form-control" id="startDate" name="startDate" 
+                           value="{{ coupon.startDate if coupon else '' }}"
+                           required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="endDate" class="form-label">End Date</label>
+                    <input type="date" class="form-control" id="endDate" name="endDate" 
+                           value="{{ coupon.endDate if coupon else '' }}"
+                           required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="productId" class="form-label">Product ID</label>
+                    <input type="text" class="form-control" id="productId" name="productId" 
+                           value="{{ coupon.productId if coupon else '' }}"
+                           required>
+                    <div class="form-text">Format: category_id/item_id (e.g., beverages/item1)</div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> {{ 'Update' if coupon else 'Add' }} Coupon
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .card {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const couponType = document.getElementById('couponType');
+    const discountSymbol = document.getElementById('discountSymbol');
+    const discountValue = document.getElementById('discountValue');
+    const discountHelp = document.getElementById('discountHelp');
+    const startDate = document.getElementById('startDate');
+    const endDate = document.getElementById('endDate');
+
+    function updateDiscountField() {
+        if (couponType.value === 'percentage') {
+            discountSymbol.textContent = '%';
+            discountValue.max = 100;
+            discountHelp.textContent = 'Enter a value between 0 and 100';
+        } else {
+            discountSymbol.textContent = '$';
+            discountValue.max = '';
+            discountHelp.textContent = 'Enter the dollar amount';
+        }
+    }
+
+    couponType.addEventListener('change', updateDiscountField);
+    updateDiscountField();
+
+    // Validate dates
+    function validateDates() {
+        const start = new Date(startDate.value);
+        const end = new Date(endDate.value);
+        
+        if (end < start) {
+            endDate.setCustomValidity('End date must be after start date');
+        } else {
+            endDate.setCustomValidity('');
+        }
+    }
+
+    startDate.addEventListener('change', validateDates);
+    endDate.addEventListener('change', validateDates);
+});
+</script>
+{% endblock %}

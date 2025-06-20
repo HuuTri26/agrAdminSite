@@ -1,0 +1,188 @@
+{% extends "navigation_bar.html" %}
+
+{% block title %}Liked Items{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Liked Items Overview</h1>
+
+    {% if error %}
+    <div class="alert alert-danger" role="alert">
+        {{ error }}
+    </div>
+    {% else %}
+        <!-- Filter Section -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search users or items...">
+                    <button class="btn btn-outline-secondary" type="button" onclick="searchItems()">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" id="sortOption" onchange="sortUsers()">
+                    <option value="most-likes">Most Liked Items First</option>
+                    <option value="least-likes">Least Liked Items First</option>
+                    <option value="alphabetical">Alphabetical by Username</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Users and Their Liked Items -->
+        <div class="users-list">
+            {% for user_id, items in liked_items.items() %}
+            <div class="card mb-4 user-card" 
+                 data-user-id="{{ user_id }}"
+                 data-items-count="{{ items|length }}"
+                 data-search-text="{{ user_id|lower }}">
+                <div class="card-header bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-person-circle me-2"></i>
+                            <a href="{{ url_for('get_user_by_id', user_id=user_id) }}" class="text-decoration-none">
+                                {{ user_id }}
+                            </a>
+                        </h5>
+                        <span class="badge bg-primary">{{ items|length }} liked items</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                        {% for item_name, item in items.items() %}
+                        <div class="col">
+                            <div class="card h-100 item-card" data-item-name="{{ item_name|lower }}">
+                                <img src="{{ item.Image }}" class="card-img-top item-image" alt="{{ item.Name }}">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ item.Name }}</h6>
+                                    <p class="card-text">
+                                        <small class="text-muted">Price: ${{ "%.2f"|format(item.Price) }}</small>
+                                    </p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="badge bg-info">Quantity: {{ item.Quantity }}</span>
+                                        <button class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-heart-fill"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- No Results Message -->
+        <div id="noResults" class="alert alert-info d-none" role="alert">
+            No users or items found matching your criteria.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .item-image {
+        height: 200px;
+        object-fit: cover;
+    }
+
+    .user-card {
+        transition: transform 0.2s;
+    }
+
+    .user-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .item-card {
+        transition: transform 0.2s;
+    }
+
+    .item-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-img-top {
+        border-top-left-radius: calc(0.25rem - 1px);
+        border-top-right-radius: calc(0.25rem - 1px);
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+
+<script>
+function searchItems() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const userCards = document.getElementsByClassName('user-card');
+    let hasVisibleItems = false;
+
+    for (let userCard of userCards) {
+        const userId = userCard.getAttribute('data-search-text');
+        const itemCards = userCard.getElementsByClassName('item-card');
+        let hasVisibleItemsInUser = false;
+
+        // Search through items in this user's collection
+        for (let itemCard of itemCards) {
+            const itemName = itemCard.getAttribute('data-item-name');
+            const shouldShowItem = itemName.includes(searchTerm);
+            itemCard.style.display = shouldShowItem ? '' : 'none';
+            if (shouldShowItem) hasVisibleItemsInUser = true;
+        }
+
+        // Show/hide user card based on user ID match or if any items match
+        const shouldShowUser = userId.includes(searchTerm) || hasVisibleItemsInUser;
+        userCard.style.display = shouldShowUser ? '' : 'none';
+        if (shouldShowUser) hasVisibleItems = true;
+    }
+
+    document.getElementById('noResults').classList.toggle('d-none', hasVisibleItems);
+}
+
+function sortUsers() {
+    const sortOption = document.getElementById('sortOption').value;
+    const container = document.querySelector('.users-list');
+    const cards = Array.from(container.getElementsByClassName('user-card'));
+
+    cards.sort((a, b) => {
+        const itemsCountA = parseInt(a.getAttribute('data-items-count'));
+        const itemsCountB = parseInt(b.getAttribute('data-items-count'));
+        const userIdA = a.getAttribute('data-user-id').toLowerCase();
+        const userIdB = b.getAttribute('data-user-id').toLowerCase();
+
+        switch(sortOption) {
+            case 'most-likes':
+                return itemsCountB - itemsCountA;
+            case 'least-likes':
+                return itemsCountA - itemsCountB;
+            case 'alphabetical':
+                return userIdA.localeCompare(userIdB);
+            default:
+                return 0;
+        }
+    });
+
+    cards.forEach(card => container.appendChild(card));
+}
+
+// Add event listener for search input
+document.getElementById('searchInput').addEventListener('keyup', function(event) {
+    if (event.key === 'Enter') {
+        searchItems();
+    }
+});
+
+// Initial sort
+document.addEventListener('DOMContentLoaded', function() {
+    sortUsers();
+});
+</script>
+{% endblock %}

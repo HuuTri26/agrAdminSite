@@ -1,0 +1,64 @@
+{% extends "navigation_bar.html" %}
+
+{% block title %}Users{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Users List</h1>
+    
+    {% if error %}
+    <div class="alert alert-danger" role="alert">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    {% if users %}
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for user_id, user in users.items() %}
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ user.FirstName }} {{ user.LastName }}</h5>
+                    <p class="card-text">
+                        <strong>User ID:</strong> {{ user_id }}<br>
+                        <strong>Email:</strong> {{ user.Email }}<br>
+                        <strong>Phone:</strong> {{ user.PhoneNumber }}<br>
+                    </p>
+                    <div class="mt-3">
+                        <a href="{{ url_for('get_user_by_id', user_id=user_id) }}" class="btn btn-primary btn-sm me-2">View Details</a>
+                        <a href="{{ url_for('get_user_orders', user_id=user_id) }}" class="btn btn-secondary btn-sm">View Orders</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info" role="alert">
+        No users found.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .card {
+        transition: transform 0.2s;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .card:hover {
+        transform: translateY(-5px);
+    }
+
+    .card-title {
+        color: #2c3e50;
+        font-weight: 600;
+    }
+
+    .card-text {
+        color: #34495e;
+    }
+</style>
+{% endblock %}

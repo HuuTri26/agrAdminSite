@@ -1,0 +1,206 @@
+{% extends "navigation_bar.html" %}
+
+{% block title %}All Items{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>All Items</h1>
+        <div class="d-flex gap-2">
+            <input type="text" id="searchInput" class="form-control" placeholder="Search items...">
+            <select id="categoryFilter" class="form-select">
+                <option value="">All Categories</option>
+                {% for category_id, category in categories.items() %}
+                <option value="{{ category_id }}">{{ category.Name }}</option>
+                {% endfor %}
+            </select>
+            <select id="sortSelect" class="form-select">
+                <option value="name-asc">Name (A-Z)</option>
+                <option value="name-desc">Name (Z-A)</option>
+                <option value="price-asc">Price (Low to High)</option>
+                <option value="price-desc">Price (High to Low)</option>
+            </select>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger" role="alert">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    {% if success %}
+    <div class="alert alert-success" role="alert">
+        {{ success }}
+    </div>
+    {% endif %}
+
+    <div class="row row-cols-1 row-cols-md-3 g-4" id="itemsContainer">
+        {% for category_id, items in all_items.items() %}
+            {% for item_id, item in items.items() %}
+            <div class="col item-card" 
+                 data-category="{{ category_id }}"
+                 data-name="{{ item.Name.lower() }}"
+                 data-price="{{ item.Price }}">
+                <div class="card h-100">
+                    <img src="{{ item.Image }}" 
+                         class="card-img-top" 
+                         alt="{{ item.Name }}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title mb-0">{{ item.Name }}</h5>
+                            <div class="btn-group">
+                                <a href="{{ url_for('edit_item_form', category_id=category_id, item_id=item_id) }}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </a>
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-danger"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#deleteModal"
+                                        data-category-id="{{ category_id }}"
+                                        data-item-id="{{ item_id }}"
+                                        data-item-name="{{ item.Name }}">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                        <p class="card-text">
+                            <strong>Category:</strong> {{ categories[category_id].Name }}<br>
+                            <strong>Price:</strong> ${{ "%.2f"|format(item.Price) }}<br>
+                            <strong>Unit:</strong> {{ item.Unit }}<br>
+                            {% if item.Description %}
+                            <small class="text-muted">{{ item.Description }}</small><br>
+                            {% endif %}
+                            {% if item.Inventory is defined %}
+                            <strong>In Stock:</strong> {{ item.Inventory }}<br>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete the item "<span id="itemName"></span>"?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Delete Item
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .card {
+        transition: transform 0.2s;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .card:hover {
+        transform: translateY(-5px);
+    }
+
+    .card-img-top {
+        height: 200px;
+        object-fit: cover;
+    }
+
+    .card-title {
+        color: #2c3e50;
+        font-weight: 600;
+    }
+
+    .card-text {
+        color: #34495e;
+        margin-top: 0.5rem;
+    }
+
+    .btn-group .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const sortSelect = document.getElementById('sortSelect');
+    const itemsContainer = document.getElementById('itemsContainer');
+    const deleteModal = document.getElementById('deleteModal');
+    const itemNameSpan = document.getElementById('itemName');
+    const deleteForm = document.getElementById('deleteForm');
+
+    function filterAndSortItems() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const selectedCategory = categoryFilter.value;
+        const [sortKey, sortOrder] = sortSelect.value.split('-');
+        
+        const items = Array.from(document.querySelectorAll('.item-card'));
+        
+        items.forEach(item => {
+            const name = item.getAttribute('data-name');
+            const category = item.getAttribute('data-category');
+            const matchesSearch = name.includes(searchTerm);
+            const matchesCategory = !selectedCategory || category === selectedCategory;
+            
+            item.style.display = matchesSearch && matchesCategory ? '' : 'none';
+        });
+
+        const visibleItems = items.filter(item => item.style.display !== 'none');
+        visibleItems.sort((a, b) => {
+            let aValue = sortKey === 'name' ? 
+                a.getAttribute('data-name') : 
+                parseFloat(a.getAttribute('data-price'));
+            let bValue = sortKey === 'name' ? 
+                b.getAttribute('data-name') : 
+                parseFloat(b.getAttribute('data-price'));
+                
+            return sortOrder === 'asc' ? 
+                (aValue > bValue ? 1 : -1) : 
+                (aValue < bValue ? 1 : -1);
+        });
+
+        visibleItems.forEach(item => itemsContainer.appendChild(item));
+    }
+
+    searchInput.addEventListener('input', filterAndSortItems);
+    categoryFilter.addEventListener('change', filterAndSortItems);
+    sortSelect.addEventListener('change', filterAndSortItems);
+
+    deleteModal.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const categoryId = button.getAttribute('data-category-id');
+        const itemId = button.getAttribute('data-item-id');
+        const itemName = button.getAttribute('data-item-name');
+        
+        itemNameSpan.textContent = itemName;
+        deleteForm.action = `/categories/${categoryId}/items/${itemId}/delete`;
+    });
+});
+</script>
+{% endblock %}

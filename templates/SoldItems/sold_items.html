@@ -1,0 +1,181 @@
+{% extends "navigation_bar.html" %}
+
+{% block title %}Sold Items by Date{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Sales History</h1>
+
+    {% if error %}
+    <div class="alert alert-danger" role="alert">
+        {{ error }}
+    </div>
+    {% else %}
+        <!-- Filter Section -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search by date (YYYY-MM-DD)">
+                    <button class="btn btn-outline-secondary" type="button" onclick="searchDates()">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" id="sortOption" onchange="sortDates()">
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="most-sales">Most Sales First</option>
+                    <option value="least-sales">Least Sales First</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Sales List -->
+        <div class="sales-list">
+            {% for date, items in sold_items.items() %}
+            {% set total_sales = namespace(value=0) %}
+            {% for item_key, item_data in items.items() %}
+                {% set total_sales.value = total_sales.value + item_data.Sales %}
+            {% endfor %}
+            <div class="card mb-3 sales-card" 
+                 data-date="{{ date }}"
+                 data-total-sales="{{ total_sales.value }}">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <h5 class="card-title mb-0">{{ date }}</h5>
+                            <small class="text-muted">{{ items|length }} different items</small>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stats">
+                                <h6 class="mb-0">Total Items Sold</h6>
+                                <span class="h4">{{ total_sales.value }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="progress" style="height: 25px;">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     data-width="{{ total_sales.value }}"
+                                     aria-valuenow="{{ total_sales.value }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                    {{ total_sales.value }} items
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2 text-end">
+                            <a href="{{ url_for('get_sold_items_details', date=date) }}" 
+                               class="btn btn-primary">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- No Results Message -->
+        <div id="noResults" class="alert alert-info d-none" role="alert">
+            No sales records found for the specified date.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .sales-card {
+        transition: transform 0.2s;
+    }
+
+    .sales-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .stats {
+        padding: 0.5rem;
+        border-radius: 0.25rem;
+        background-color: #f8f9fa;
+    }
+
+    .progress {
+        border-radius: 1rem;
+    }
+
+    .progress-bar {
+        transition: width 0.6s ease;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+
+<script>
+function searchDates() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const cards = document.getElementsByClassName('sales-card');
+    let hasVisibleItems = false;
+
+    for (let card of cards) {
+        const date = card.getAttribute('data-date').toLowerCase();
+        const shouldShow = date.includes(searchTerm);
+        
+        card.style.display = shouldShow ? '' : 'none';
+        if (shouldShow) hasVisibleItems = true;
+    }
+
+    document.getElementById('noResults').classList.toggle('d-none', hasVisibleItems);
+}
+
+function sortDates() {
+    const sortOption = document.getElementById('sortOption').value;
+    const container = document.querySelector('.sales-list');
+    const cards = Array.from(container.getElementsByClassName('sales-card'));
+
+    cards.sort((a, b) => {
+        const dateA = a.getAttribute('data-date');
+        const dateB = b.getAttribute('data-date');
+        const salesA = parseInt(a.getAttribute('data-total-sales'));
+        const salesB = parseInt(b.getAttribute('data-total-sales'));
+
+        switch(sortOption) {
+            case 'newest':
+                return dateB.localeCompare(dateA);
+            case 'oldest':
+                return dateA.localeCompare(dateB);
+            case 'most-sales':
+                return salesB - salesA;
+            case 'least-sales':
+                return salesA - salesB;
+            default:
+                return 0;
+        }
+    });
+
+    cards.forEach(card => container.appendChild(card));
+}
+
+// Add event listener for search input
+document.getElementById('searchInput').addEventListener('keyup', function(event) {
+    if (event.key === 'Enter') {
+        searchDates();
+    }
+});
+
+// Initial sort
+document.addEventListener('DOMContentLoaded', function() {
+    // Set progress bar widths
+    document.querySelectorAll('.progress-bar').forEach(bar => {
+        const value = parseInt(bar.getAttribute('data-width'));
+        bar.style.width = (value / 100) + '%';
+    });
+    
+    sortDates();
+});
+</script>
+{% endblock %}
